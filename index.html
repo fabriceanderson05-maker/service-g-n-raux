@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur Facility Manager : Arbitrage Budget & Maintenance - DEXFORMA</title>
+    <!-- Police Inter pour une lisibilité technique optimale -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        dexBg: '#070B14',
+                        dexSurface: '#0B1120',
+                        dexCard: '#0F172A',
+                        dexBorder: '#1E293B',
+                        dexOrange: '#EA580C',
+                        dexOrangeHover: '#F97316',
+                        dexCyan: '#38BDF8',
+                        dexGreen: '#10B981',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #070B14;
+            color: #F8FAFC;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.04) 0%, transparent 45%),
+                radial-gradient(circle at 85% 20%, rgba(234, 88, 12, 0.05) 0%, transparent 45%);
+            min-height: 100vh;
+        }
+        /* Barre de défilement personnalisée sombre */
+        ::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B1120;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1E293B;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+        .transition-all-smooth {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-card {
+                background: #f8fafc !important;
+                border: 1px solid #cbd5e1 !important;
+                color: #0f172a !important;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-dexOrange selection:text-white pb-12">
+
+    <!-- Notification Toast (remplace alert()) -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Barre supérieure globale style Espace Privé -->
+    <div class="border-b border-dexBorder/80 bg-dexSurface/90 backdrop-blur-md sticky top-0 z-30 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1.5 font-extrabold tracking-tight text-lg">
+                    <span class="text-dexCyan">DEX</span><span class="text-white">FORMA</span>
+                </div>
+                <span class="text-slate-600">|</span>
+                <span class="text-xs sm:text-sm text-slate-300 font-medium truncate">Espace Pédagogique • Services Généraux</span>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-3">
+                <span class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-dexGreen border border-emerald-500/20">
+                    <span class="w-1.5 h-1.5 rounded-full bg-dexGreen animate-pulse"></span>
+                    Immeuble Tertiaire 5 000 m²
+                </span>
+                <button onclick="resetSimulation()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-dexCard hover:bg-slate-800 text-slate-300 border border-dexBorder transition-all-smooth cursor-pointer">
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <span>Réinitialiser</span>
+                </button>
+                <button onclick="copyFullReport()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-dexCard hover:bg-slate-800 text-white border border-dexBorder transition-all-smooth cursor-pointer">
+                    <svg class="w-3.5 h-3.5 text-dexCyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    <span class="hidden sm:inline">Exporter le bilan</span>
+                    <span class="sm:hidden">Exporter</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteneur Principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+        <!-- En-tête Technique DEXFORMA -->
+        <div class="bg-dexSurface border border-dexBorder rounded-xl p-5 sm:p-6 mb-6 shadow-xl">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-start sm:items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-dexCard border border-dexBorder flex items-center justify-center shrink-0 shadow-inner">
+                        <svg class="w-6 h-6 text-dexOrange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white">DEXFORMA</h1>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase bg-dexBorder text-dexCyan border border-dexCyan/30">
+                                FACILITY MANAGEMENT
+                            </span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-1">
+                            Simulateur de pilotage des Services Généraux & Environnements de travail • Arbitrage Budget OPEX/CAPEX & Maintenance
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 self-start md:self-center">
+                    <div class="text-right">
+                        <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Progression de l'exercice</div>
+                        <div class="text-sm font-bold text-white"><span id="progress-count">0</span> / 8 décisions arbitrées</div>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-dexCard border border-dexBorder flex items-center justify-center relative">
+                        <span id="progress-percent" class="text-xs font-extrabold text-dexOrange">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barre d'onglets horizontaux (Style DEXFORMA) -->
+            <div class="mt-6 pt-4 border-t border-dexBorder/70 no-print">
+                <div id="quarter-tabs" class="flex items-center gap-2 overflow-x-auto pb-2">
+                    <!-- Généré dynamiquement par JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerte Critique Réglementaire (Affichée dynamiquement si Conformité < 60%) -->
+        <div id="compliance-alert" class="hidden mb-6 bg-red-950/60 border border-red-500/50 rounded-xl p-4 flex items-start gap-3.5 shadow-lg">
+            <div class="p-2 bg-red-500/20 rounded-lg text-red-400 shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-red-300 uppercase tracking-wide">Alerte Critique : Risque Juridique ERP & Code du Travail</h3>
+                <p class="text-xs sm:text-sm text-red-200/90 mt-1">
+                    Votre indice de conformité réglementaire est passé sous le seuil critique de <strong>60 %</strong>. En tant que Gestionnaire de Services Généraux, votre responsabilité civile et pénale est exposée en cas de sinistre ou de contrôle de la commission de sécurité.
+                </p>
+            </div>
+        </div>
+
+        <!-- Grille Principale : Colonne Gauche (Scénarios ou Bilan) + Colonne Droite (KPI Temps Réel) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- COLONNE GAUCHE : Zone Interactive (7 ou 8 colonnes) -->
+            <div class="lg:col-span-8 space-y-6" id="main-workspace">
+                <!-- Contenu injecté dynamiquement (Trimestre actif ou Bilan Annuel Final) -->
+            </div>
+
+            <!-- COLONNE DROITE : Tableau de bord KPI en temps réel style "BILAN AÉRAULIQUE" (4 colonnes) -->
+            <aside class="lg:col-span-4 bg-dexCard border border-dexBorder rounded-xl p-5 sm:p-6 shadow-xl sticky top-20 print-card">
+                <div class="flex items-center justify-between mb-5">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">PILOTAGE & INDICATEURS</span>
+                    <span id="global-status-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-dexGreen border border-emerald-500/30">
+                        Exploitation maîtrisée
+                    </span>
+                </div>
+
+                <!-- Bloc Budgets OPEX & CAPEX -->
+                <div class="space-y-4 pb-5 border-b border-dexBorder">
+                    <!-- OPEX -->
+                    <div class="bg-dexSurface/90 border border-dexBorder rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-medium text-slate-400">Budget OPEX restant (Exploitation)</span>
+                            <span class="text-[11px] font-semibold text-dexCyan">Initial : 250 000 €</span>
+                        </div>
+                        <div class="flex items-baseline justify-between mb-2">
+                            <span id="kpi-opex-val" class="text-2xl font-extrabold text-white tracking-tight">250 000 €</span>
+                            <span id="kpi-opex-pct" class="text-xs font-bold text-dexCyan">100%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div id="kpi-opex-bar" class="bg-dexCyan h-2 rounded-full transition-all-smooth" style="width: 100%"></div>
+                        </div>
+                    </div>
+
+                    <!-- CAPEX -->
+                    <div class="bg-dexSurface/90 border border-dexBorder rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-medium text-slate-400">Budget CAPEX restant (Investissement)</span>
+                            <span class="text-[11px] font-semibold text-dexOrange">Initial : 120 000 €</span>
+                        </div>
+                        <div class="flex items-baseline justify-between mb-2">
+                            <span id="kpi-capex-val" class="text-2xl font-extrabold text-white tracking-tight">120 000 €</span>
+                            <span id="kpi-capex-pct" class="text-xs font-bold text-dexOrange">100%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div id="kpi-capex-bar" class="bg-dexOrange h-2 rounded-full transition-all-smooth" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grille des 4 KPI de performance opérationnelle -->
+                <div class="pt-5 space-y-4">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-400">PERFORMANCE DU SITE (KPI)</div>
+
+                    <!-- KPI 1 : Conformité & Sécurité -->
+                    <div class="bg-dexSurface/70 border border-dexBorder rounded-xl p-3.5">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400" id="dot-compliance"></span>
+                                Conformité & Sécurité ERP
+                            </span>
+                            <span id="kpi-compliance-val" class="text-sm font-extrabold text-emerald-400">80 %</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div id="kpi-compliance-bar" class="bg-emerald-500 h-2 rounded-full transition-all-smooth" style="width: 80%"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                            <span>Seuil critique : 60 %</span>
+                            <span>Cible : ≥ 85 %</span>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2 : Satisfaction & Confort Occupants -->
+                    <div class="bg-dexSurface/70 border border-dexBorder rounded-xl p-3.5">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-dexCyan"></span>
+                                Satisfaction & Confort (QAI)
+                            </span>
+                            <span id="kpi-comfort-val" class="text-sm font-extrabold text-dexCyan">75 %</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div id="kpi-comfort-bar" class="bg-dexCyan h-2 rounded-full transition-all-smooth" style="width: 75%"></div>
+                        </div>
+                    </div>
+
+                    <!-- KPI 3 : État Technique du Patrimoine -->
+                    <div class="bg-dexSurface/70 border border-dexBorder rounded-xl p-3.5">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                                État Technique Patrimoine
+                            </span>
+                            <span id="kpi-asset-val" class="text-sm font-extrabold text-amber-400">80 %</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div id="kpi-asset-bar" class="bg-amber-400 h-2 rounded-full transition-all-smooth" style="width: 80%"></div>
+                        </div>
+                    </div>
+
+                    <!-- KPI 4 : Performance RSE & Sobriété -->
+                    <div class="bg-dexSurface/70 border border-dexBorder rounded-xl p-3.5">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-teal-400"></span>
+                                Sobriété Énergétique & RSE
+                            </span>
+                            <span id="kpi-rse-val" class="text-sm font-extrabold text-teal-400">65 %</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div id="kpi-rse-bar" class="bg-teal-400 h-2 rounded-full transition-all-smooth" style="width: 65%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bouton accès rapide au bilan si tout est complété -->
+                <div class="mt-6 pt-4 border-t border-dexBorder no-print">
+                    <button onclick="switchTab(4)" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-dexSurface hover:bg-slate-800 text-slate-200 border border-dexBorder flex items-center justify-center gap-2 transition-all-smooth cursor-pointer">
+                        <span>Consulter le Bilan Annuel</span>
+                        <svg class="w-4 h-4 text-dexOrange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </button>
+                </div>
+            </aside>
+
+        </div>
+    </main>
+
+    <!-- SCRIPT DE SIMULATION & LOGIQUE MÉTIER -->
+    <script>
+        // =========================================================================
+        // 1. DONNÉES PÉDAGOGIQUES & SCÉNARIOS (8 DÉCISIONS SUR 4 TRIMESTRES)
+        // =========================================================================
+        const INITIAL_STATE = {
+            opex: 250000,
+            capex: 120000,
+            compliance: 80,
+            comfort: 75,
+            asset: 80,
+            rse: 65
+        };
+
+        const QUARTERS = [
+            { id: 0, shortLabel: "1. T1 : Janv – Mars", fullTitle: "Trimestre 1 : Lancement, Audit Technique & Conformité", subtitle: "Prise en main du site tertiaire, diagnostic des installations CVC et mise en sécurité réglementaire." },
+            { id: 1, shortLabel: "2. T2 : Avr – Juin", fullTitle: "Trimestre 2 : Contrats Prestataires & Qualité de Vie au Travail", subtitle: "Optimisation des achats de services et amélioration du confort thermique et acoustique des espaces." },
+            { id: 2, shortLabel: "3. T3 : Juil – Sept", fullTitle: "Trimestre 3 : Pathologies du Bâti & Gestion de Crise", subtitle: "Préservation de l'intégrité du bâtiment et continuité d'activité face aux aléas climatiques." },
+            { id: 3, shortLabel: "4. T4 : Oct – Déc", fullTitle: "Trimestre 4 : Sobriété Énergétique & Pilotage Pluriannuel", subtitle: "Performance durable (Décret Tertiaire) et préparation stratégique du budget N+1." },
+            { id: 4, shortLabel: "5. Bilan Annuel Final", fullTitle: "Bilan Annuel de Performance & Évaluation Facility Manager", subtitle: "Synthèse de vos arbitrages budgétaires, opérationnels et réglementaires sur l'exercice." }
+        ];
+
+        const SCENARIOS = [
+            // TRIMESTRE 1
+            {
+                id: 1,
+                quarter: 0,
+                moduleTag: "MODULE 2 • MAINTENANCE & CVC",
+                title: "Alerte encrassement filtres CTA et dérive capteur CO2",
+                context: "La GTB signale une perte de charge anormale sur la Centrale de Traitement d'Air (CTA) principale et un taux de CO2 dépassant 1 100 ppm au 3e étage (baisse de la Qualité de l'Air Intérieur et fatigue des occupants).",
+                choices: [
+                    {
+                        key: "A",
+                        label: "Maintenance préventive immédiate + nettoyage complet des gaines",
+                        impactsText: ["-12 000 € OPEX", "+10% Confort QAI", "+8% Patrimoine"],
+                        effects: { opex: -12000, capex: 0, compliance: 0, comfort: 10, asset: 8, rse: 0 },
+                        quality: "optimal",
+                        feedback: "Arbitrage exemplaire (Module 2 & 3) : En traitant la cause racine en maintenance préventive sur votre budget d'exploitation (OPEX), vous restaurez immédiatement la Qualité de l'Air Intérieur (QAI), évitez la surconsommation des ventilateurs et prolongez la durée de vie de la CTA."
+                    },
+                    {
+                        key: "B",
+                        label: "Remplacement simple des filtres au minimum sans nettoyage réseau",
+                        impactsText: ["-3 500 € OPEX", "-5% Confort QAI", "-3% Patrimoine"],
+                        effects: { opex: -3500, capex: 0, compliance: 0, comfort: -5, asset: -3, rse: 0 },
+                        quality: "suboptimal",
+                        feedback: "Solution partielle (Module 2) : Si l'économie immédiate sur l'OPEX est visible, l'encrassement des registres et des gaines persiste. Les pertes de charge restent élevées et les plaintes liées à la QAI vont reprendre rapidement."
+                    },
+                    {
+                        key: "C",
+                        label: "Reporter l'intervention à la révision annuelle dans 8 mois",
+                        impactsText: ["0 €", "-15% Confort QAI", "-12% Patrimoine"],
+                        effects: { opex: 0, capex: 0, compliance: 0, comfort: -15, asset: -12, rse: 0 },
+                        quality: "risky",
+                        feedback: "Erreur de pilotage (Module 2) : Différer une maintenance préventive critique entraîne une dégradation accélérée des équipements (risque de panne moteur coûteuse) et dégrade fortement la santé et la productivité des occupants."
+                    }
+                ]
+            },
+            {
+                id: 2,
+                quarter: 0,
+                moduleTag: "MODULE 6 • CONFORMITÉ & SÉCURITÉ ERP",
+                title: "Non-conformités électriques et sécurité incendie (Rapport bureau de contrôle)",
+                context: "Le rapport périodique réglementaire relève 4 blocs autonomes d'éclairage de sécurité (BAES) défaillants dans les circulations et un registre de sécurité incendie incomplet avant le passage de la commission.",
+                choices: [
+                    {
+                        key: "A",
+                        label: "Mise en conformité immédiate par prestataire agréé + mise à jour registre",
+                        impactsText: ["-8 500 € CAPEX", "+15% Conformité", "Risque juridique nul"],
+                        effects: { opex: 0, capex: -8500, compliance: 15, comfort: 0, asset: 0, rse: 0 },
+                        quality: "optimal",
+                        feedback: "Excellente maîtrise réglementaire (Module 6) : La sécurité incendie et l'accessibilité ne se négocient jamais. La levée immédiate des réserves protège les occupants et dégage la responsabilité pénale du Gestionnaire de Services Généraux."
+                    },
+                    {
+                        key: "B",
+                        label: "Commander le matériel et faire poser en interne sous 2 mois",
+                        impactsText: ["-2 500 € OPEX", "+5% Conformité", "Risque modéré"],
+                        effects: { opex: -2500, capex: 0, compliance: 5, comfort: 0, asset: 0, rse: 0 },
+                        quality: "suboptimal",
+                        feedback: "Attention aux habilitations et délais (Module 6) : Faire intervenir une équipe interne non habilitée ou laisser courir un délai de 2 mois sur des organes de sécurité expose l'entreprise en cas d'incident ou de contrôle inopiné."
+                    },
+                    {
+                        key: "C",
+                        label: "Ignorer les observations jusqu'à la prochaine commission",
+                        impactsText: ["0 €", "-25% Conformité", "Alerte rouge"],
+                        effects: { opex: 0, capex: 0, compliance: -25, comfort: 0, asset: 0, rse: 0 },
+                        quality: "risky",
+                        feedback: "Faute professionnelle majeure (Module 6) : En cas de sinistre ou d'inspection du travail, l'absence de levée de réserves connues engage directement la responsabilité civile et pénale de l'exploitant et peut entraîner une fermeture administrative."
+                    }
+                ]
+            },
+
+            // TRIMESTRE 2
+            {
+                id: 3,
+                quarter: 1,
+                moduleTag: "MODULE 4 & 5 • PRESTATAIRES & OPTIMISATION COÛTS",
+                title: "Renouvellement du contrat multiservice (propreté, accueil, espaces verts)",
+                context: "Votre principal contrat d'exploitation arrive à échéance. Les coûts de main-d'œuvre ont augmenté et la direction vous demande d'optimiser le budget OPEX tout en maintenant la qualité perçue.",
+                choices: [
+                    {
+                        key: "A",
+                        label: "Renégociation avec clauses de performance (SLA) et produits écolabellisés",
+                        impactsText: ["+15 000 € Économie OPEX", "+10% RSE", "+5% Confort"],
+                        effects: { opex: 15000, capex: 0, compliance: 0, comfort: 5, asset: 0, rse: 10 },
+                        quality: "optimal",
+                        feedback: "Pilotage contractuel de haut niveau (Modules 4 & 5) : Passer d'une obligation de moyens à une obligation de résultats (SLA) tout en intégrant des critères d'achats responsables permet de réduire durablement l'OPEX sans sacrifier la qualité."
+                    },
+                    {
+                        key: "B",
+                        label: "Appel d'offres agressif au moins-disant avec réduction des fréquences",
+                        impactsText: ["+28 000 € Économie OPEX", "-15% Confort", "-5% RSE"],
+                        effects: { opex: 28000, capex: 0, compliance: 0, comfort: -15, asset: 0, rse: -5 },
+                        quality: "suboptimal",
+                        feedback: "Piège classique du 'moins-disant' (Module 5) : L'économie OPEX immédiate est séduisante, mais la baisse de fréquence dégrade visiblement l'hygiène des locaux, générant des tensions sociales internes et une dégradation prématurée des revêtements."
+                    },
+                    {
+                        key: "C",
+                        label: "Reconduction tacite sans modification ni mise en concurrence",
+                        impactsText: ["-5 000 € Inflation OPEX", "Statu quo"],
+                        effects: { opex: -5000, capex: 0, compliance: 0, comfort: 0, asset: 0, rse: 0 },
+                        quality: "risky",
+                        feedback: "Manque de pilotage budgétaire (Module 5) : Subir l'indexation automatique sans challenger les périmètres de prestations érode vos marges de manœuvre budgétaires pour le reste de l'année."
+                    }
+                ]
+            },
+            {
+                id: 4,
+                quarter: 1,
+                moduleTag: "MODULE 3 • ENVIRONNEMENT DE TRAVAIL & ERGONOMIE",
+                title: "Inconfort acoustique et surchauffe solaire sur le plateau open-space Sud",
+                context: "Avec les premières chaleurs de printemps, les collaborateurs de l'open-space Sud se plaignent d'éblouissement, d'une température dépassant 27°C l'après-midi et d'une forte réverbération sonore.",
+                choices: [
+                    {
+                        key: "A",
+                        label: "Pose de panneaux acoustiques recyclés + films solaires haute performance",
+                        impactsText: ["-22 000 € CAPEX", "+18% Confort", "+10% RSE"],
+                        effects: { opex: 0, capex: -22000, compliance: 0, comfort: 18, asset: 0, rse: 10 },
+                        quality: "optimal",
+                        feedback: "Investissement durable pertinent (Modules 3 & 8) : L'utilisation du budget d'investissement (CAPEX) sur des solutions passives (protection solaire et correction acoustique éco-conçue) améliore durablement le bien-être au travail et limite le recours à la climatisation."
+                    },
+                    {
+                        key: "B",
+                        label: "Abaissement forcé des consignes de climatisation à 19°C",
+                        impactsText: ["-1 500 € OPEX", "+5% Confort", "-8% RSE"],
+                        effects: { opex: -1500, capex: 0, compliance: 0, comfort: 5, asset: 0, rse: -8 },
+                        quality: "suboptimal",
+                        feedback: "Fausse bonne idée énergétique (Modules 3 & 8) : Forcer la climatisation fait exploser la facture énergétique (OPEX), crée des courants d'air froid inconfortables et ne résout absolument pas le problème de bruit ni d'éblouissement."
+                    },
+                    {
+                        key: "C",
+                        label: "Aucune action budgétaire engagée",
+                        impactsText: ["0 €", "-12% Confort"],
+                        effects: { opex: 0, capex: 0, compliance: 0, comfort: -12, asset: 0, rse: 0 },
+                        quality: "risky",
+                        feedback: "Dégradation du climat social (Module 3) : Ignorer des irritants physiques avérés (bruit + chaleur) augmente l'absentéisme et dégrade l'image des Services Généraux auprès des directions métiers."
+                    }
+                ]
+            },
+
+            // TRIMESTRE 3
+            {
+                id: 5,
+                quarter: 2,
+                moduleTag: "MODULE 2 • PATHOLOGIES DU BÂTI & PRÉVENTION",
+                title: "Infiltration d'eau en toiture-terrasse au-dessus du local électrique TGBT",
+                context: "Lors d'une ronde technique estivale, des traces d'humidité actives sont repérées au plafond du local abritant le Tableau Général Basse Tension (TGBT) suite à un orage violent.",
+                choices: [
+                    {
+                        key: "A",
+                        label: "Réfection d'étanchéité complète de la zone + thermographie infrarouge TGBT",
+                        impactsText: ["-35 000 € CAPEX", "+18% Patrimoine", "+10% Conformité"],
+                        effects: { opex: 0, capex: -35000, compliance: 10, comfort: 0, asset: 18, rse: 0 },
+                        quality: "optimal",
+                        feedback: "Préservation critique du patrimoine (Modules 2 & 6) : Eau et électricité haute puissance représentent un risque majeur d'incendie et d'arrêt total du site. Mobiliser du CAPEX pour traiter l'étanchéité et contrôler le TGBT sécurise l'actif immobilier."
+                    },
+                    {
+                        key: "B",
+                        label: "Réparation ponctuelle au mastic bitumineux par un prestataire généraliste",
+                        impactsText: ["-6 000 € OPEX", "+2% Patrimoine", "Risque récidive"],
+                        effects: { opex: -6000, capex: 0, compliance: 0, comfort: 0, asset: 2, rse: 0 },
+                        quality: "suboptimal",
+                        feedback: "Rustine risquée (Module 2) : Un colmatage de surface sur une membrane d'étanchéité défaillante cède généralement aux premiers écarts thermiques, laissant l'eau migrer dans l'isolant et menacer le TGBT."
+                    },
+                    {
+                        key: "C",
+                        label: "Mise en place d'un bac de récupération et surveillance visuelle",
+                        impactsText: ["0 €", "-20% Patrimoine", "-10% Conformité"],
+                        effects: { opex: 0, capex: 0, compliance: -10, comfort: 0, asset: -20, rse: 0 },
+                        quality: "risky",
+                        feedback: "Mise en danger du site (Modules 2 & 6) : Laisser une infiltration active au-dessus d'un TGBT expose le bâtiment à un court-circuit généralisé, une perte d'exploitation majeure et un refus de prise en charge par l'assureur."
+                    }
+                ]
+            },
+            {
+                id: 6,
+                quarter: 2,
+                moduleTag: "MODULE 7 • GESTION DE CRISE & COMMUNICATION USAGERS",
+                title: "Coupure d'eau et arrêt de la climatisation pendant 48h en pleine canicule",
+                context: "Une rupture de canalisation publique entraîne une coupure d'eau potable sur le quartier (sanitaires hors service et arrêt des groupes froids à eau perdue) alors que 36°C sont annoncés.",
+                choices: [
+                    {
+                        key: "A",
+                        label: "Déclenchement PCA : télétravail d'urgence, fontaines, communication multicanale",
+                        impactsText: ["-7 000 € OPEX", "+12% Confort & Confiance"],
+                        effects: { opex: -7000, capex: 0, compliance: 0, comfort: 12, asset: 0, rse: 0 },
+                        quality: "optimal",
+                        feedback: "Gestion de crise remarquable (Module 7) : L'activation rapide du Plan de Continuité d'Activité (PCA) avec une communication claire et transparente rassure les usagers, garantit les conditions d'hygiène du Code du travail et valorise la posture du Facility Manager."
+                    },
+                    {
+                        key: "B",
+                        label: "Maintien sur site avec distribution de bouteilles d'eau sans communication globale",
+                        impactsText: ["-2 000 € OPEX", "-15% Confort"],
+                        effects: { opex: -2000, capex: 0, compliance: 0, comfort: -15, asset: 0, rse: 0 },
+                        quality: "suboptimal",
+                        feedback: "Communication insuffisante (Modules 6 & 7) : Sans sanitaires fonctionnels ni rafraîchissement, le maintien des équipes sur site génère panique, rumeurs et non-conformité sanitaire."
+                    },
+                    {
+                        key: "C",
+                        label: "Laisser chaque manager gérer individuellement son équipe",
+                        impactsText: ["0 €", "-25% Confort"],
+                        effects: { opex: 0, capex: 0, compliance: 0, comfort: -25, asset: 0, rse: 0 },
+                        quality: "risky",
+                        feedback: "Absence de pilotage en situation sensible (Module 7) : En période de crise, le Gestionnaire de Services Généraux doit être le point de coordination central. L'inaction crée une désorganisation totale et une perte de crédibilité."
+                    }
+                ]
+            },
+
+            // TRIMESTRE 4
+            {
+                id: 7,
+                quarter: 3,
+                moduleTag: "MODULE 8 • SOBRIÉTÉ ÉNERGÉTIQUE & DÉCRET TERTIAIRE",
+                title: "Audit énergétique avant l'hiver et trajectoire Décret Tertiaire",
+                context: "Votre immeuble de 5 000 m² est assujetti au Décret Tertiaire (-40% de consommation énergétique d'ici 2030). L'audit propose d'optimiser le pilotage CVC et l'éclairage avant la saison de chauffe.",
+                choices: [
+                    {
+                        key: "A",
+                        label: "Déploiement régulation GTB légère (programmation horaire) + relamping LED",
+                        impactsText: ["-38 000 € CAPEX", "+12 000 € Économie OPEX", "+22% RSE", "+10% Patrimoine"],
+                        effects: { opex: 12000, capex: -38000, compliance: 0, comfort: 0, asset: 10, rse: 22 },
+                        quality: "optimal",
+                        feedback: "Stratégie ROI & RSE gagnante (Module 8) : L'investissement CAPEX dans la régulation horaire CVC et les LED offre un temps de retour sur investissement rapide grâce aux économies d'OPEX générées dès le premier hiver, tout en sécurisant votre conformité Décret Tertiaire."
+                    },
+                    {
+                        key: "B",
+                        label: "Campagne d'affichage éco-gestes et baisse manuelle des consignes à 19°C",
+                        impactsText: ["-1 500 € OPEX", "+8% RSE", "-5% Confort"],
+                        effects: { opex: -1500, capex: 0, compliance: 0, comfort: -5, asset: 0, rse: 8 },
+                        quality: "suboptimal",
+                        feedback: "Action utile mais insuffisante (Module 8) : La sensibilisation des occupants est indispensable, mais sans automatisation (réduit de nuit et week-end), les dérives énergétiques restent trop importantes pour atteindre les objectifs réglementaires."
+                    },
+                    {
+                        key: "C",
+                        label: "Conserver les réglages actuels sans investissement",
+                        impactsText: ["0 €", "-10% RSE"],
+                        effects: { opex: 0, capex: 0, compliance: 0, comfort: 0, asset: 0, rse: -10 },
+                        quality: "risky",
+                        feedback: "Retard stratégique (Module 8) : L'inaction énergétique alourdit la facture d'exploitation et expose l'actif immobilier à une décote de sa valeur verte et à des sanctions administratives (Name & Shame Décret Tertiaire)."
+                    }
+                ]
+            },
+            {
+                id: 8,
+                quarter: 3,
+                moduleTag: "MODULE 1 & 5 • PILOTAGE STRATÉGIQUE & BUDGET N+1",
+                title: "Arbitrage de fin d'année et préparation du Plan Pluriannuel de Travaux (PPT)",
+                context: "La direction générale vous reçoit pour le comité budgétaire annuel afin de statuer sur l'affectation des ressources de fin d'exercice et la vision stratégique à 3 ans.",
+                choices: [
+                    {
+                        key: "A",
+                        label: "Élaborer un PPT chiffré sur 3 ans avec KPI et audit accessibilité PMR",
+                        impactsText: ["-9 000 € OPEX", "+12% Conformité", "+10% Patrimoine"],
+                        effects: { opex: -9000, capex: 0, compliance: 12, comfort: 0, asset: 10, rse: 0 },
+                        quality: "optimal",
+                        feedback: "Posture de Facility Manager stratégique (Modules 1 & 5) : Vous sortez d'une gestion purement réactive pour offrir à la direction une visibilité pluriannuelle chiffrée, anticipant les obligations réglementaires (PMR) et les gros renouvellements."
+                    },
+                    {
+                        key: "B",
+                        label: "Consommer le reliquat CAPEX en achats de mobilier décoratif",
+                        impactsText: ["-15 000 € CAPEX", "+5% Confort"],
+                        effects: { opex: 0, capex: -15000, compliance: 0, comfort: 5, asset: 0, rse: 0 },
+                        quality: "suboptimal",
+                        feedback: "Gestion budgétaire court-termiste (Module 5) : Dépenser un budget uniquement pour 'ne pas le perdre' sans prioriser les enjeux techniques ou réglementaires affaiblit votre crédibilité face à la direction financière."
+                    },
+                    {
+                        key: "C",
+                        label: "Rendre l'intégralité du reliquat sans proposer de planification pluriannuelle",
+                        impactsText: ["0 €", "-5% Patrimoine"],
+                        effects: { opex: 0, capex: 0, compliance: 0, comfort: 0, asset: -5, rse: 0 },
+                        quality: "risky",
+                        feedback: "Manque d'anticipation (Module 1) : Sans Plan Pluriannuel de Travaux (PPT), votre enveloppe budgétaire N+1 risque d'être réduite d'office alors que le bâtiment vieillit."
+                    }
+                ]
+            }
+        ];
+
+        // =========================================================================
+        // 2. ÉTAT DYNAMIQUE DE L'APPLICATION
+        // =========================================================================
+        let activeTab = 0; // 0..3 = Trimestres, 4 = Bilan Final
+        let userDecisions = {}; // { scenarioId: choiceKey ('A' | 'B' | 'C') }
+        let currentMetrics = { ...INITIAL_STATE };
+
+        // =========================================================================
+        // 3. CALCUL DES MÉTRIQUES & LOGIQUE D'ARBITRAGE
+        // =========================================================================
+        function recalculateMetrics() {
+            const metrics = { ...INITIAL_STATE };
+
+            SCENARIOS.forEach(scenario => {
+                const chosenKey = userDecisions[scenario.id];
+                if (chosenKey) {
+                    const choiceObj = scenario.choices.find(c => c.key === chosenKey);
+                    if (choiceObj) {
+                        metrics.opex += choiceObj.effects.opex;
+                        metrics.capex += choiceObj.effects.capex;
+                        metrics.compliance = clamp(metrics.compliance + choiceObj.effects.compliance, 0, 100);
+                        metrics.comfort = clamp(metrics.comfort + choiceObj.effects.comfort, 0, 100);
+                        metrics.asset = clamp(metrics.asset + choiceObj.effects.asset, 0, 100);
+                        metrics.rse = clamp(metrics.rse + choiceObj.effects.rse, 0, 100);
+                    }
+                }
+            });
+
+            currentMetrics = metrics;
+            updateDashboardUI();
+        }
+
+        function clamp(val, min, max) {
+            return Math.max(min, Math.min(max, val));
+        }
+
+        function formatEuro(amount) {
+            return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
+        }
+
+        function selectChoice(scenarioId, choiceKey) {
+            userDecisions[scenarioId] = choiceKey;
+            recalculateMetrics();
+            renderWorkspace();
+            renderTabs();
+            showToast(`Décision enregistrée pour le cas #${scenarioId} (Choix ${choiceKey})`, 'success');
+        }
+
+        function switchTab(tabIndex) {
+            activeTab = tabIndex;
+            renderTabs();
+            renderWorkspace();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetSimulation() {
+            userDecisions = {};
+            activeTab = 0;
+            recalculateMetrics();
+            renderTabs();
+            renderWorkspace();
+            showToast("La simulation a été réinitialisée aux valeurs initiales.", "info");
+        }
+
+        // =========================================================================
+        // 4. MISE À JOUR DU TABLEAU DE BORD KPI (COLONNE DROITE)
+        // =========================================================================
+        function updateDashboardUI() {
+            const answeredCount = Object.keys(userDecisions).length;
+            const totalCount = SCENARIOS.length;
+            const progressPct = Math.round((answeredCount / totalCount) * 100);
+
+            document.getElementById('progress-count').textContent = answeredCount;
+            document.getElementById('progress-percent').textContent = `${progressPct}%`;
+
+            // OPEX
+            const opexPct = clamp(Math.round((currentMetrics.opex / INITIAL_STATE.opex) * 100), 0, 100);
+            const opexEl = document.getElementById('kpi-opex-val');
+            opexEl.textContent = formatEuro(currentMetrics.opex);
+            opexEl.className = `text-2xl font-extrabold tracking-tight ${currentMetrics.opex < 0 ? 'text-red-400' : 'text-white'}`;
+            document.getElementById('kpi-opex-pct').textContent = `${opexPct}%`;
+            document.getElementById('kpi-opex-bar').style.width = `${opexPct}%`;
+            document.getElementById('kpi-opex-bar').className = `h-2 rounded-full transition-all-smooth ${currentMetrics.opex < 30000 ? 'bg-red-500' : 'bg-dexCyan'}`;
+
+            // CAPEX
+            const capexPct = clamp(Math.round((currentMetrics.capex / INITIAL_STATE.capex) * 100), 0, 100);
+            const capexEl = document.getElementById('kpi-capex-val');
+            capexEl.textContent = formatEuro(currentMetrics.capex);
+            capexEl.className = `text-2xl font-extrabold tracking-tight ${currentMetrics.capex < 0 ? 'text-red-400' : 'text-white'}`;
+            document.getElementById('kpi-capex-pct').textContent = `${capexPct}%`;
+            document.getElementById('kpi-capex-bar').style.width = `${capexPct}%`;
+            document.getElementById('kpi-capex-bar').className = `h-2 rounded-full transition-all-smooth ${currentMetrics.capex < 15000 ? 'bg-red-500' : 'bg-dexOrange'}`;
+
+            // Conformité
+            const compVal = document.getElementById('kpi-compliance-val');
+            const compBar = document.getElementById('kpi-compliance-bar');
+            const compDot = document.getElementById('dot-compliance');
+            const alertBox = document.getElementById('compliance-alert');
+
+            compVal.textContent = `${currentMetrics.compliance} %`;
+            compBar.style.width = `${currentMetrics.compliance}%`;
+
+            if (currentMetrics.compliance < 60) {
+                compVal.className = "text-sm font-extrabold text-red-400";
+                compBar.className = "bg-red-500 h-2 rounded-full transition-all-smooth";
+                compDot.className = "w-2 h-2 rounded-full bg-red-500 animate-ping";
+                alertBox.classList.remove('hidden');
+            } else if (currentMetrics.compliance < 80) {
+                compVal.className = "text-sm font-extrabold text-amber-400";
+                compBar.className = "bg-amber-400 h-2 rounded-full transition-all-smooth";
+                compDot.className = "w-2 h-2 rounded-full bg-amber-400";
+                alertBox.classList.add('hidden');
+            } else {
+                compVal.className = "text-sm font-extrabold text-emerald-400";
+                compBar.className = "bg-emerald-500 h-2 rounded-full transition-all-smooth";
+                compDot.className = "w-2 h-2 rounded-full bg-emerald-400";
+                alertBox.classList.add('hidden');
+            }
+
+            // Confort
+            document.getElementById('kpi-comfort-val').textContent = `${currentMetrics.comfort} %`;
+            document.getElementById('kpi-comfort-bar').style.width = `${currentMetrics.comfort}%`;
+
+            // Patrimoine
+            document.getElementById('kpi-asset-val').textContent = `${currentMetrics.asset} %`;
+            document.getElementById('kpi-asset-bar').style.width = `${currentMetrics.asset}%`;
+
+            // RSE
+            document.getElementById('kpi-rse-val').textContent = `${currentMetrics.rse} %`;
+            document.getElementById('kpi-rse-bar').style.width = `${currentMetrics.rse}%`;
+
+            // Badge statut global
+            const statusBadge = document.getElementById('global-status-badge');
+            if (currentMetrics.compliance < 60 || currentMetrics.opex < 0 || currentMetrics.capex < 0) {
+                statusBadge.textContent = "Alerte de pilotage";
+                statusBadge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/15 text-red-400 border border-red-500/30";
+            } else if (currentMetrics.compliance >= 85 && currentMetrics.comfort >= 80 && currentMetrics.rse >= 75) {
+                statusBadge.textContent = "Performance optimale";
+                statusBadge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-dexGreen border border-emerald-500/30";
+            } else {
+                statusBadge.textContent = "Exploitation maîtrisée";
+                statusBadge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-500/15 text-dexCyan border border-sky-500/30";
+            }
+        }
+
+        // =========================================================================
+        // 5. RENDU DES ONGLETS DE NAVIGATION
+        // =========================================================================
+        function renderTabs() {
+            const container = document.getElementById('quarter-tabs');
+            container.innerHTML = QUARTERS.map(q => {
+                const isActive = activeTab === q.id;
+                let badgeHtml = '';
+
+                if (q.id < 4) {
+                    const qScenarios = SCENARIOS.filter(s => s.quarter === q.id);
+                    const doneCount = qScenarios.filter(s => userDecisions[s.id]).length;
+                    const isComplete = doneCount === qScenarios.length;
+                    badgeHtml = `<span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        isActive 
+                            ? 'bg-black/25 text-white' 
+                            : isComplete 
+                                ? 'bg-emerald-500/20 text-emerald-400' 
+                                : 'bg-slate-800 text-slate-400'
+                    }">${doneCount}/${qScenarios.length}</span>`;
+                } else {
+                    const allDone = Object.keys(userDecisions).length === SCENARIOS.length;
+                    badgeHtml = allDone 
+                        ? `<span class="ml-1.5 w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>` 
+                        : '';
+                }
+
+                const activeClasses = isActive
+                    ? "bg-dexOrange text-white border-dexOrange shadow-lg shadow-orange-950/50 font-bold"
+                    : "bg-dexCard hover:bg-slate-800/90 text-slate-300 border-dexBorder font-medium";
+
+                return `
+                    <button onclick="switchTab(${q.id})" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm border whitespace-nowrap flex items-center transition-all-smooth cursor-pointer ${activeClasses}">
+                        <span>${q.shortLabel}</span>
+                        ${badgeHtml}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        // =========================================================================
+        // 6. RENDU DE L'ESPACE DE TRAVAIL (SCÉNARIOS OU BILAN ANNUEL)
+        // =========================================================================
+        function renderWorkspace() {
+            const workspace = document.getElementById('main-workspace');
+            const currentQuarter = QUARTERS[activeTab];
+
+            if (activeTab < 4) {
+                const quarterScenarios = SCENARIOS.filter(s => s.quarter === activeTab);
+                const allQuarterAnswered = quarterScenarios.every(s => userDecisions[s.id]);
+
+                let html = `
+                    <!-- Bannière d'introduction du trimestre -->
+                    <div class="bg-dexCard border border-dexBorder rounded-xl p-5 sm:p-6 shadow-lg">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-dexBorder text-dexCyan">
+                                PÉRIODE D'EXPLOITATION • T${activeTab + 1}
+                            </span>
+                            <span class="text-xs text-slate-400">2 arbitrages requis ce trimestre</span>
+                        </div>
+                        <h2 class="text-lg sm:text-xl font-bold text-white">${currentQuarter.fullTitle}</h2>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-1">${currentQuarter.subtitle}</p>
+                    </div>
+                `;
+
+                quarterScenarios.forEach(scenario => {
+                    const selectedKey = userDecisions[scenario.id];
+                    const selectedChoice = selectedKey ? scenario.choices.find(c => c.key === selectedKey) : null;
+
+                    html += `
+                        <div class="bg-dexCard border ${selectedKey ? 'border-slate-700' : 'border-dexBorder'} rounded-xl p-5 sm:p-6 shadow-xl transition-all-smooth">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                <span class="px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider uppercase bg-sky-500/10 text-dexCyan border border-sky-500/20">
+                                    ${scenario.moduleTag}
+                                </span>
+                                ${selectedKey 
+                                    ? `<span class="inline-flex items-center gap-1 text-xs font-semibold text-dexGreen"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Arbitrage validé (Option ${selectedKey})</span>`
+                                    : `<span class="text-xs font-medium text-dexOrange">En attente de décision</span>`
+                                }
+                            </div>
+
+                            <h3 class="text-base sm:text-lg font-bold text-white mb-2">
+                                Cas #${scenario.id} — ${scenario.title}
+                            </h3>
+                            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed bg-dexSurface/80 border border-dexBorder/80 rounded-lg p-3.5 mb-5">
+                                ${scenario.context}
+                            </p>
+
+                            <div class="space-y-3">
+                                <div class="text-xs font-bold uppercase tracking-wider text-slate-400">Sélectionnez votre décision d'arbitrage :</div>
+                                ${scenario.choices.map(choice => {
+                                    const isSelected = selectedKey === choice.key;
+                                    const cardStyle = isSelected
+                                        ? "bg-dexOrange/15 border-dexOrange ring-1 ring-dexOrange"
+                                        : "bg-dexSurface hover:bg-slate-800/80 border-dexBorder hover:border-slate-600";
+
+                                    const badgeStyle = isSelected
+                                        ? "bg-dexOrange text-white"
+                                        : "bg-dexCard text-slate-300 border border-dexBorder";
+
+                                    return `
+                                        <button onclick="selectChoice(${scenario.id}, '${choice.key}')" class="w-full text-left p-4 rounded-xl border transition-all-smooth cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${cardStyle}">
+                                            <div class="flex items-start gap-3">
+                                                <span class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-extrabold shrink-0 mt-0.5 ${badgeStyle}">
+                                                    ${choice.key}
+                                                </span>
+                                                <div>
+                                                    <div class="text-xs sm:text-sm font-semibold text-white">${choice.label}</div>
+                                                    <div class="flex flex-wrap gap-1.5 mt-2">
+                                                        ${choice.impactsText.map(tag => {
+                                                            let tagColor = "bg-slate-800 text-slate-300 border-slate-700";
+                                                            if (tag.includes('+')) tagColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/25";
+                                                            if (tag.includes('-€') || tag.includes('€ OPEX') || tag.includes('€ CAPEX')) {
+                                                                if (tag.includes('Économie')) tagColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/25";
+                                                                else tagColor = "bg-sky-500/10 text-dexCyan border-sky-500/25";
+                                                            }
+                                                            if (tag.includes('-%') || tag.includes('-5%') || tag.includes('-8%') || tag.includes('-10%') || tag.includes('-12%') || tag.includes('-15%') || tag.includes('-20%') || tag.includes('-25%') || tag.includes('Alerte') || tag.includes('Risque')) {
+                                                                tagColor = "bg-red-500/10 text-red-400 border-red-500/25";
+                                                            }
+                                                            return `<span class="px-2 py-0.5 rounded text-[11px] font-medium border ${tagColor}">${tag}</span>`;
+                                                        }).join('')}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="self-end sm:self-center shrink-0">
+                                                <span class="text-xs font-semibold ${isSelected ? 'text-dexOrange' : 'text-slate-400'}">
+                                                    ${isSelected ? 'Sélectionné' : 'Choisir →'}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+
+                            <!-- Feedback Pédagogique Immédiat -->
+                            ${selectedChoice ? renderFeedbackBox(selectedChoice) : ''}
+                        </div>
+                    `;
+                });
+
+                // Bouton de navigation vers le trimestre suivant
+                html += `
+                    <div class="flex items-center justify-between pt-2 no-print">
+                        <button onclick="switchTab(${Math.max(0, activeTab - 1)})" class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-dexCard hover:bg-slate-800 text-slate-300 border border-dexBorder transition-all-smooth cursor-pointer ${activeTab === 0 ? 'invisible' : ''}">
+                            ← Trimestre précédent
+                        </button>
+                        <button onclick="switchTab(${activeTab + 1})" class="px-5 py-3 rounded-xl text-xs sm:text-sm font-bold bg-dexOrange hover:bg-dexOrangeHover text-white shadow-lg shadow-orange-950/50 transition-all-smooth cursor-pointer flex items-center gap-2">
+                            <span>${activeTab === 3 ? 'Accéder au Bilan Annuel Final' : `Passer au Trimestre ${activeTab + 2}`}</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                        </button>
+                    </div>
+                `;
+
+                workspace.innerHTML = html;
+            } else {
+                // RENDU DE L'ÉCRAN DE BILAN ANNUEL FINAL
+                workspace.innerHTML = renderFinalSummary();
+            }
+        }
+
+        function renderFeedbackBox(choice) {
+            let borderClass = "border-emerald-500/40 bg-emerald-950/25";
+            let titleColor = "text-emerald-400";
+            let badgeText = "ANALYSE DU FORMATEUR • DÉCISION OPTIMALE";
+
+            if (choice.quality === "suboptimal") {
+                borderClass = "border-amber-500/40 bg-amber-950/25";
+                titleColor = "text-amber-400";
+                badgeText = "ANALYSE DU FORMATEUR • ARBITRAGE INTERMÉDIAIRE";
+            } else if (choice.quality === "risky") {
+                borderClass = "border-red-500/40 bg-red-950/25";
+                titleColor = "text-red-400";
+                badgeText = "ANALYSE DU FORMATEUR • VIGILANCE MÉTIER";
+            }
+
+            return `
+                <div class="mt-5 p-4 rounded-xl border ${borderClass} transition-all-smooth">
+                    <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${titleColor} mb-1.5">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>${badgeText}</span>
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                        ${choice.feedback}
+                    </p>
+                </div>
+            `;
+        }
+
+        // =========================================================================
+        // 7. CALCUL DU SCORE GLOBAL & ÉCRAN DE BILAN ANNUEL FINAL
+        // =========================================================================
+        function computeFinalEvaluation() {
+            const answeredCount = Object.keys(userDecisions).length;
+
+            // Calcul des 4 piliers sur 100
+            // 1. Pilier Budget (OPEX + CAPEX restants sans déficit)
+            const opexRatio = clamp(currentMetrics.opex / INITIAL_STATE.opex, 0, 1);
+            const capexRatio = clamp(currentMetrics.capex / INITIAL_STATE.capex, 0, 1);
+            let budgetScore = Math.round(((opexRatio * 0.5 + capexRatio * 0.5) * 40) + 60);
+            if (currentMetrics.opex < 0 || currentMetrics.capex < 0) budgetScore = Math.max(20, budgetScore - 35);
+            budgetScore = clamp(budgetScore, 0, 100);
+
+            // 2. Pilier Conformité
+            const complianceScore = currentMetrics.compliance;
+
+            // 3. Pilier Confort Occupants
+            const comfortScore = currentMetrics.comfort;
+
+            // 4. Pilier Patrimoine & RSE
+            const assetRseScore = Math.round((currentMetrics.asset + currentMetrics.rse) / 2);
+
+            // Note globale pondérée / 100
+            let globalScore = Math.round(
+                (budgetScore * 0.20) +
+                (complianceScore * 0.30) +
+                (comfortScore * 0.25) +
+                (assetRseScore * 0.25)
+            );
+            if (complianceScore < 60) globalScore = Math.min(globalScore, 58);
+
+            // Détermination du profil Facility Manager
+            let profileTitle = "";
+            let profileDesc = "";
+            let profileBadgeClass = "";
+
+            if (answeredCount < SCENARIOS.length) {
+                profileTitle = "Simulation incomplète (" + answeredCount + "/8 décisions)";
+                profileDesc = "Complétez l'ensemble des 8 cas pratiques répartis sur les 4 trimestres pour obtenir votre certification de profil complète.";
+                profileBadgeClass = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+            } else if (complianceScore < 60) {
+                profileTitle = "Gestionnaire Économe mais à Risque Réglementaire";
+                profileDesc = "Vous avez préservé vos enveloppes financières, mais plusieurs impasses sur la sécurité ERP et la maintenance critique exposent fortement votre responsabilité juridique et la continuité d'exploitation du site.";
+                profileBadgeClass = "bg-red-500/20 text-red-300 border-red-500/40";
+            } else if (globalScore >= 82 && currentMetrics.opex >= 0 && currentMetrics.capex >= 0) {
+                profileTitle = "Gestionnaire Stratégique & Performant (Profil Expert)";
+                profileDesc = "Félicitations ! Vous maîtrisez l'équilibre complexe du Facility Management : arbitrage rigoureux entre OPEX et CAPEX, conformité réglementaire irréprochable, qualité de vie au travail et trajectoire énergétique durable.";
+                profileBadgeClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+            } else if (comfortScore >= 80 && budgetScore < 65) {
+                profileTitle = "Gestionnaire Orienté Usagers (Budget sous tension)";
+                profileDesc = "Les occupants saluent votre réactivité et la qualité de l'environnement de travail, mais une vigilance accrue sur la renégociation des contrats et l'arbitrage CAPEX/OPEX est nécessaire pour sécuriser vos marges.";
+                profileBadgeClass = "bg-sky-500/20 text-sky-300 border-sky-500/40";
+            } else {
+                profileTitle = "Gestionnaire Opérationnel Équilibré";
+                profileDesc = "Vous assurez la continuité de service et la conformité globale du bâtiment tertiaire. Quelques leviers d'optimisation contractuelle et de sobriété énergétique vous permettront d'atteindre l'excellence opérationnelle.";
+                profileBadgeClass = "bg-dexOrange/20 text-orange-300 border-dexOrange/40";
+            }
+
+            return {
+                answeredCount,
+                globalScore,
+                budgetScore,
+                complianceScore,
+                comfortScore,
+                assetRseScore,
+                profileTitle,
+                profileDesc,
+                profileBadgeClass
+            };
+        }
+
+        function renderFinalSummary() {
+            const evalData = computeFinalEvaluation();
+
+            return `
+                <!-- Carte Principale de Score & Profil -->
+                <div class="bg-dexCard border border-dexBorder rounded-xl p-6 sm:p-8 shadow-xl print-card">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-dexBorder">
+                        <div>
+                            <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-dexBorder text-dexCyan">
+                                SYNTHÈSE DE COMPÉTENCES • FORMATION DEXFORMA
+                            </span>
+                            <h2 class="text-xl sm:text-2xl font-extrabold text-white mt-2">Bilan Annuel de Pilotage</h2>
+                            <div class="mt-3 inline-block px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold border ${evalData.profileBadgeClass}">
+                                ${evalData.profileTitle}
+                            </div>
+                        </div>
+
+                        <div class="bg-dexSurface border border-dexBorder rounded-2xl p-4 sm:p-5 text-center shrink-0 min-w-[150px]">
+                            <div class="text-xs font-semibold uppercase tracking-wider text-slate-400">Score Global</div>
+                            <div class="text-4xl font-extrabold text-dexOrange mt-1">${evalData.globalScore}<span class="text-lg text-slate-400">/100</span></div>
+                            <div class="text-[11px] text-slate-400 mt-1">${evalData.answeredCount} / 8 cas traités</div>
+                        </div>
+                    </div>
+
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mt-5">
+                        ${evalData.profileDesc}
+                    </p>
+
+                    <!-- Graphique comparatif des 4 Piliers -->
+                    <div class="mt-6 pt-6 border-t border-dexBorder">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">ÉVALUATION PAR PILIER DE COMPÉTENCE</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Pilier 1 -->
+                            <div class="bg-dexSurface border border-dexBorder rounded-xl p-4">
+                                <div class="flex justify-between text-xs font-bold mb-2">
+                                    <span class="text-slate-200">1. Maîtrise Budgétaire (OPEX/CAPEX)</span>
+                                    <span class="text-dexCyan">${evalData.budgetScore} / 100</span>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-2.5">
+                                    <div class="bg-dexCyan h-2.5 rounded-full" style="width: ${evalData.budgetScore}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Pilier 2 -->
+                            <div class="bg-dexSurface border border-dexBorder rounded-xl p-4">
+                                <div class="flex justify-between text-xs font-bold mb-2">
+                                    <span class="text-slate-200">2. Conformité & Sécurité ERP</span>
+                                    <span class="${evalData.complianceScore < 60 ? 'text-red-400' : 'text-emerald-400'}">${evalData.complianceScore} / 100</span>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-2.5">
+                                    <div class="${evalData.complianceScore < 60 ? 'bg-red-500' : 'bg-emerald-500'} h-2.5 rounded-full" style="width: ${evalData.complianceScore}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Pilier 3 -->
+                            <div class="bg-dexSurface border border-dexBorder rounded-xl p-4">
+                                <div class="flex justify-between text-xs font-bold mb-2">
+                                    <span class="text-slate-200">3. Confort & Qualité de Vie (QAI)</span>
+                                    <span class="text-sky-400">${evalData.comfortScore} / 100</span>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-2.5">
+                                    <div class="bg-sky-400 h-2.5 rounded-full" style="width: ${evalData.comfortScore}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Pilier 4 -->
+                            <div class="bg-dexSurface border border-dexBorder rounded-xl p-4">
+                                <div class="flex justify-between text-xs font-bold mb-2">
+                                    <span class="text-slate-200">4. Patrimoine & Sobriété RSE</span>
+                                    <span class="text-dexOrange">${evalData.assetRseScore} / 100</span>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-2.5">
+                                    <div class="bg-dexOrange h-2.5 rounded-full" style="width: ${evalData.assetRseScore}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Boutons d'exportation & impression -->
+                    <div class="mt-6 pt-5 border-t border-dexBorder flex flex-wrap items-center gap-3 no-print">
+                        <button onclick="copyFullReport()" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-dexOrange hover:bg-dexOrangeHover text-white flex items-center gap-2 transition-all-smooth cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                            <span>Copier le rapport complet</span>
+                        </button>
+                        <button onclick="window.print()" class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-dexSurface hover:bg-slate-800 text-slate-200 border border-dexBorder flex items-center gap-2 transition-all-smooth cursor-pointer">
+                            <svg class="w-4 h-4 text-dexCyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            <span>Imprimer / Enregistrer en PDF</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Journal complet des décisions prises -->
+                <div class="bg-dexCard border border-dexBorder rounded-xl p-6 shadow-xl print-card">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-4">JOURNAL DÉTAILLÉ DES ARBITRAGES DE L'EXERCICE</h3>
+                    <div class="space-y-3">
+                        ${SCENARIOS.map(s => {
+                            const key = userDecisions[s.id];
+                            const choice = key ? s.choices.find(c => c.key === key) : null;
+                            return `
+                                <div class="bg-dexSurface border border-dexBorder rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div>
+                                        <div class="text-[11px] font-bold text-dexCyan uppercase">T${s.quarter + 1} • Cas #${s.id} • ${s.moduleTag}</div>
+                                        <div class="text-xs sm:text-sm font-bold text-white mt-0.5">${s.title}</div>
+                                        <div class="text-xs text-slate-400 mt-1">
+                                            ${choice 
+                                                ? `<span class="text-slate-200 font-semibold">Décision ${choice.key} :</span> ${choice.label}` 
+                                                : `<span class="text-amber-400 italic">Aucune décision enregistrée</span>`
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="shrink-0 no-print">
+                                        <button onclick="switchTab(${s.quarter})" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dexCard hover:bg-slate-800 text-slate-300 border border-dexBorder cursor-pointer">
+                                            ${choice ? 'Modifier' : 'Arbitrer'}
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // =========================================================================
+        // 8. EXPORTATION DU RAPPORT (CLIPBOARD COMPATIBLE IFRAME) & TOASTS
+        // =========================================================================
+        function copyFullReport() {
+            const evalData = computeFinalEvaluation();
+            let lines = [
+                "====================================================================",
+                "RAPPORT DE SIMULATION FACILITY MANAGEMENT - DEXFORMA",
+                "Formation : Gestionnaire de Services Généraux",
+                "====================================================================",
+                `Score Global : ${evalData.globalScore} / 100`,
+                `Profil : ${evalData.profileTitle}`,
+                "",
+                "--- BILAN FINANCIER & INDICATEURS FINAUX ---",
+                `• Budget OPEX restant : ${formatEuro(currentMetrics.opex)} (Initial : 250 000 €)`,
+                `• Budget CAPEX restant : ${formatEuro(currentMetrics.capex)} (Initial : 120 000 €)`,
+                `• Indice Conformité & Sécurité ERP : ${currentMetrics.compliance} %`,
+                `• Satisfaction & Confort Occupants (QAI) : ${currentMetrics.comfort} %`,
+                `• État Technique du Patrimoine : ${currentMetrics.asset} %`,
+                `• Performance RSE & Sobriété Énergétique : ${currentMetrics.rse} %`,
+                "",
+                "--- JOURNAL DES DÉCISIONS PRISES ---"
+            ];
+
+            SCENARIOS.forEach(s => {
+                const key = userDecisions[s.id];
+                const choice = key ? s.choices.find(c => c.key === key) : null;
+                lines.push(`T${s.quarter + 1} - Cas #${s.id} (${s.title}) :`);
+                if (choice) {
+                    lines.push(`   -> Choix ${choice.key} : ${choice.label} [${choice.impactsText.join(', ')}]`);
+                } else {
+                    lines.push(`   -> Non arbitré`);
+                }
+            });
+
+            const textToCopy = lines.join("\n");
+
+            // Utilisation de textarea + execCommand('copy') pour compatibilité maximale iFrame
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast("Le rapport complet a été copié dans votre presse-papiers !", "success");
+            } catch (err) {
+                showToast("Impossible de copier automatiquement. Utilisez le bouton Imprimer.", "error");
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let borderClass = "border-dexCyan/40 bg-dexCard text-white";
+            if (type === "success") borderClass = "border-emerald-500/50 bg-dexCard text-emerald-300";
+            if (type === "error") borderClass = "border-red-500/50 bg-dexCard text-red-300";
+
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-2xl text-xs font-semibold flex items-center gap-2.5 transition-all-smooth ${borderClass}`;
+            toast.innerHTML = `
+                <span class="w-2 h-2 rounded-full ${type === 'success' ? 'bg-emerald-400' : type === 'error' ? 'bg-red-400' : 'bg-dexCyan'}"></span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        // =========================================================================
+        // 9. INITIALISATION AU CHARGEMENT
+        // =========================================================================
+        window.onload = function () {
+            recalculateMetrics();
+            renderTabs();
+            renderWorkspace();
+        };
+    </script>
+</body>
+</html>
